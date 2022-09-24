@@ -1,0 +1,1132 @@
+/* TO DO LIST
+fix PercentageBuffMultiplier on pet
+add/fix command orc
+add blood fury
+add PNL HC
+*/
+var app = Application.currentApplication()
+app.includeStandardAdditions = true;
+ 
+function readFile(file) {
+    // Convert the file to a string
+    var fileString = file.toString()
+ 
+    // Read the file and return its contents
+    return app.read(Path(fileString))
+}
+
+function splitrow(text, row) {
+	var teatrowarray = text.split(/\r\n|[\r\n]/g);
+	// Splits parameter text into array textrowarray
+	
+	var rowLength = textrowarray.length;
+	// Sets rowLength to number of objects in textrowarray
+	
+	return textrowarray[row];
+
+}
+
+function writeTextToFile(text, file, overwriteExistingContent) {
+    try {
+ 
+        // Convert the file to a string
+        var fileString = file.toString()
+ 
+        // Open the file for writing
+        var openedFile = app.openForAccess(Path(fileString), { writePermission: true })
+ 
+        // Clear the file if content should be overwritten
+        if (overwriteExistingContent) {
+            app.setEof(openedFile, { to: 0 })
+        }
+ 
+        // Write the new content to the file
+        app.write(text, { to: openedFile, startingAt: app.getEof(openedFile) })
+ 
+        // Close the file
+        app.closeAccess(openedFile)
+ 
+        // Return a boolean indicating that writing was successful
+        return true
+    }
+    catch(error) {
+ 
+        try {
+            // Close the file
+            app.closeAccess(file)
+        }
+        catch(error) {
+            // Report the error is closing failed
+            console.log(`Couldn't close file: ${error}`)
+        }
+ 
+        // Return a boolean indicating that writing was successful
+        return false
+    }
+}
+if (!Object.entries) {
+  Object.entries = function( obj ){
+    var ownProps = Object.keys( obj ),
+        i = ownProps.length,
+        resArray = new Array(i); // preallocate the Array
+    while (i--)
+      resArray[i] = [ownProps[i], obj[ownProps[i]]];
+    
+    return resArray;
+  };
+}
+function countDecimals(value) {
+    if(Math.floor(value) === value) return 0;
+    return value.toString().split(".")[1].length || 0; 
+}
+//for (i = 0; i < 10; i++) {
+//Set up
+var TalentsDestruction = {
+	"Improved Shadow Bolt": 0,
+	"Bane": 5,
+	"Aftermath": 2,
+	"Molten Skin": 0,
+	"Cataclysm": 3,
+	"Demonic Power": 2,
+	"Shadowburn": 0,
+	"Ruin": 5,
+	"Intensity": 1,
+	"Destructive Reach": 1,
+	"Improved Searing Pain": 0,
+	"Backlash": 3,
+	"Improved Immolate": 3,
+	"Devastation": 1,
+	"Nether Protection": 0,
+	"Emberstorm": 5,
+	"Conflagrate": 1,
+	"Soul Leech": 3,
+	"Pyroclasm": 2,
+	"Shadow and Flame": 5,
+	"Improved Soul Leech": 2,
+	"Backdraft": 3,
+	"Shadowfury": 1,
+	"Empowered Imp": 3,
+	"Fire and Brimstone": 5,
+	"Chaos Bolt": 1,
+};
+var TalentsDestructionApply = {
+	"Fire and Brimstone": 0,
+};
+var TalentsDemonology = {
+	"Improved Healthstone": 0,
+	"Improved Imp": 3,
+	"Demonic Embrace": 0,
+	"Fel Synergy": 0,
+	"Improved Health Funnel": 0,
+	"Demonic Brutality": 0,
+	"Fel Vitality": 0,
+	"Improved Succubus": 0,
+	"Soul Link": 0,
+	"Fel Domination": 0,
+	"Demonic Aegis": 2,
+	"Unholy Power": 0,
+};
+var Glyphs = {
+	"Glyph of Incinerate": 1,
+	"Glyph of Immolate": 1,
+}
+var Buffs = {
+	"Human Spirit": 0,
+	"Command (Orc)" : 1,
+	"Fel Armour": 1,
+	"2pt10": 1,
+	"Firestone": 1,
+	"Spellstone": 0,
+	"Blessing of Kings": 1,
+	"Gift of the Wild": 1,
+	"Arcane Brilliance": 1,
+	"Horn of Winter": 1,
+	"Prayer of Spirit": 1,
+	"Prayer of Fortitude": 1,
+	"Demonic Pact": 550,
+	"3% Crit": 1,
+	"5% Spell Crit": 1,
+	"3% Haste": 1,
+	"Wrath of Air Totem": 1,
+	"3% Damage": 1,
+	"Focus Magic": 1,
+	"40 Haste Food": 0,
+	"46 Spellpower Food": 1,
+	"Flask of the Frost Wyrm": 1,
+	"Curse of Elements": 1,
+	"ICC 30%": 1,
+	"Meta Gem": true,
+	"Heroism (start)": 1,
+};
+var Pets = {
+	"Imp": 1,
+};
+var Items = {
+	"Ashen Band of Endless Destruction": 1,
+};
+var Trinkets = {
+	"Muradin's Spyglass (HC)": 0,
+	"Reign of the Unliving (NM)": 0,
+	"Dislodged Foreign Object (NM)": 0,
+	"Dislodged Foreign Object (HC)": 1,
+	"Charred Twilight Scale (HC)": 1,
+};
+if (Trinkets["Dislodged Foreign Object (NM)"] == 1 && Trinkets["Dislodged Foreign Object (HC)"] == 1) {throw new Error("You can't wear 2 DFO trinkets");};
+var TrinketsICD = {
+	"Reign of the Unliving (NM)": 2,
+	"Dislodged Foreign Object (NM)": 45,
+	"Dislodged Foreign Object (HC)": 45,
+	"Charred Twilight Scale (HC)": 45,
+};
+var ItemICD = {
+	"Ashen Band of Endless Destruction": 60,
+	"Potion of Speed": 60,
+	"Potion of Wild Magic": 60,
+	"Flame Cap": 180,
+};
+var ItemCurrentICD = {
+	"Ashen Band of Endless Destruction": 0,
+	"Potion of Speed": 0,
+	"Potion of Wild Magic": 0,
+	"Flame Cap": 0,
+}
+var TrinketsCurrentICD = {
+	"Reign of the Unliving (NM)": 0,
+	"Dislodged Foreign Object (NM)": 0,
+	"Dislodged Foreign Object (HC)": 0,
+	"Charred Twilight Scale (HC)": 0,
+
+};
+var Consumables = {
+	"Potion of Speed": 1,
+	"Potion of Wild Magic": 0,
+	"Flame Cap": 1,
+}
+var ProcChance = {
+	"4pt10": 0.15,
+	"Surge of Power": 1/3,
+	"Frostforged Sage": 0.1,
+	"Twilight Flames": 0.1,
+};
+var DamageDuration = 154;
+
+var Strength = 72;
+var Agility = 74;
+var Stamina = 1610; 
+var Intellect = 1501;
+var Spirit = 219;
+var Armour = 2421;
+
+var Spellpower = 3337/* + 362*/;
+var SpellHit = 369;
+var SpellCrit = 958/* + 112*/;
+var SpellHaste = 1050/* + 175*/;
+
+var PetImpSpellpower = Spellpower * 0.15;
+
+var MaxHealth = 1000;
+var MaxMana = 1000;
+
+var CurrentHealth = 1000;
+var CurrentMana = 1000;
+
+var BaseCrit = 0.0265 + 0.01 * TalentsDestruction["Backlash"] + 0.03 * Buffs["Focus Magic"] + 0.03 * Buffs["3% Crit"] + 0.05 * Buffs["5% Spell Crit"];
+
+Spellpower += Buffs["Demonic Pact"] + 46 * Buffs["46 Spellpower Food"] + 180 * Buffs["Flask of the Frost Wyrm"];
+SpellHaste += 40 * Buffs["40 Haste Food"] + 60 * Buffs["Spellstone"] + 155 * Trinkets["Dislodged Foreign Object (NM)"] + 170 * Trinkets["Dislodged Foreign Object (HC)"]+ 184 * Trinkets["Charred Twilight Scale (HC)"];
+
+Spirit += 80 * Buffs["Prayer of Spirit"];
+Stamina += 165 * Buffs["Prayer of Fortitude"];
+
+Strength += 155 * Buffs["Horn of Winter"];
+Agility += 155 * Buffs["Horn of Winter"];
+
+Intellect += 60 * Buffs["Arcane Brilliance"];
+
+Strength += 37 * Buffs["Gift of the Wild"];
+Agility += 37 * Buffs["Gift of the Wild"];
+Stamina += 37 * Buffs["Gift of the Wild"];
+Intellect += 37 * Buffs["Gift of the Wild"];
+Spirit += 37 * Buffs["Gift of the Wild"];
+Armour += 750 * Buffs["Gift of the Wild"];
+
+
+Strength *= 1 + 0.1 * Buffs["Blessing of Kings"];
+Agility *= 1 + 0.1 * Buffs["Blessing of Kings"];
+Stamina *= 1 + 0.1 * Buffs["Blessing of Kings"];
+Intellect *= 1 + 0.1 * Buffs["Blessing of Kings"];
+Spirit *= 1 + 0.1 * Buffs["Blessing of Kings"];
+
+Spirit *= 1.00 + 0.03 * Buffs["Human Spirit"];
+Spellpower += Buffs["Fel Armour"] * 180 * (1.00 + 0.1 * TalentsDemonology["Demonic Aegis"]) + Spirit * (0.3 + 0.03 * TalentsDemonology["Demonic Aegis"]) + 150 * Trinkets["Reign of the Unliving (NM)"];
+SpellCrit += 49 * Buffs["Firestone"] + 152 * Trinkets["Muradin's Spyglass (HC)"];
+
+//Variable Numbers
+
+var isCasting = false;
+var t = 0.0;
+var dt = 0.001;
+var tPrecision = countDecimals(dt);
+var CurrentCastTime = 0.0;
+var CurrentImpCastTime = 0.0;
+var CurrentGCD = 0.0;
+var DamageDoneWarlock = 0.0;
+var DamageDoneImp = 0.0;
+var CurrentSpellCast = "";
+var CritDamageBonus = 1;
+var Prepot = true;
+var PrepotTime = -2;
+
+//Simulator Mechanics
+
+var flag = false;
+var sflag = "";
+var dmg = "";
+var timestamps = "";
+var spelltimestamp = "";
+var resisted = 0;
+var proctimestamp = true;
+//debugger
+
+var TempBuffsExist = {
+	"Backdraft": 0,
+	"Pyroclasm": 0,
+	"4pt10": 0,
+	"Cultivated Power": 0,
+	"Mote of Flame (NM)": 0,
+	"Surge of Power": 0,
+	"Twilight Flames": 0,
+	"Empowered Imp": 0,
+	"Frostforged Sage": 0,
+	"Potion of Speed": 0,
+	"Potion of Wild Magic": 0,
+	"Flame Cap": 0,
+	"Heroism": 0,
+};
+var TempBuffsTimer = {
+	"Backdraft": 0,
+	"Pyroclasm": 0,
+	"4pt10": 0,
+	"Cultivated Power": 0,
+	"Mote of Flame (NM)": Number.POSITIVE_INFINITY,
+	"Surge of Power": 0,
+	"Surging Power": 0,
+	"Twilight Flames": 0,
+	"Frostforged Sage": 0,
+	"Potion of Speed": 0,
+	"Potion of Wild Magic": 0,
+	"Flame Cap": 0,
+	"Heroism": 0,
+};
+var TempBuffsCharge = {
+	"Backdraft": 0,
+	"Pyroclasm": Number.POSITIVE_INFINITY,
+	"4pt10": Number.POSITIVE_INFINITY,
+	"Cultivated Power": 0,
+	"Mote of Flame (NM)": 0,
+	"Surge of Power": 0,
+	"Surging Power": 0,
+	"Twilight Flames": 0,
+};
+var DebuffUptime = {
+	"Immolate(DOT)": 0.0,
+	"Conflagrate(DOT)": 0.0,
+};
+var BuffUptime = {
+	"4pt10": 0.0,
+	"Dislodged Foreign Object (NM)": 0.0,
+	"Dislodged Foreign Object (HC)": 0.0,
+}
+var timespentbad = 0.0;
+
+var SpellCD = {
+	"Conflagrate": 10,
+	"Chaos Bolt": 12,
+	"Curse of Doom": 60,
+};
+var CurrentSpellCD = {
+	"Conflagrate": 0,
+	"Chaos Bolt": 0,
+	"Curse of Doom": 0,
+};
+var SpellCritDamage = {
+	"Conflagrate": 1.5 + 0.1 * TalentsDestruction["Ruin"],
+	"Incinerate": 1.5 + 0.1 * TalentsDestruction["Ruin"],
+	"Chaos Bolt": 1.5 + 0.1 * TalentsDestruction["Ruin"],
+	"Immolate": 1.5 + 0.1 * TalentsDestruction["Ruin"],
+	"Immolate(DOT)": 1.5 + 0.1 * TalentsDestruction["Ruin"],
+	"Firebolt" : 1.5 + 0.1 * TalentsDestruction["Ruin"]
+	
+};
+
+if (Buffs["Meta Gem"] == true) {
+	CritDamageBonus = 1.03;
+}
+var SpellManaCost = {
+	"Incinerate": Math.floor(539*(1-(1/30)*TalentsDestruction["Cataclysm"])),
+	"Chaos Bolt": Math.floor(269*(1-(1/30)*TalentsDestruction["Cataclysm"])),
+	"Immolate": Math.floor(655*(1-(1/30)*TalentsDestruction["Cataclysm"])),
+	"Conflagrate": Math.floor(616*(1-(1/30)*TalentsDestruction["Cataclysm"])),
+}
+var SpellCount = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+var NoCritSpellCount = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+var CritSpellCount = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+
+var SpellCritChance = {
+	"Incinerate": BaseCrit + SpellCrit/4591 + Intellect/16666.67 + 0.05 * TalentsDestruction["Devastation"] + 0.05 * Buffs["2pt10"],
+	"Chaos Bolt": BaseCrit + SpellCrit/4591 + Intellect/16666.67 + 0.05 * TalentsDestruction["Devastation"],
+	"Immolate": BaseCrit + SpellCrit/4591 + Intellect/16666.67 + 0.05 * TalentsDestruction["Devastation"],
+	"Immolate(DOT)": BaseCrit + SpellCrit/4591 + Intellect/16666.67 + 0.05 * TalentsDestruction["Devastation"],
+	"Conflagrate": BaseCrit + SpellCrit/4591 + Intellect/16666.67 + 0.05 * TalentsDestruction["Devastation"] + 0.05 * TalentsDestruction["Fire and Brimstone"],
+	"Firebolt": 0.05,
+};
+var BaseCastTime = {
+	"GCD": 1.5,
+	"Incinerate": 2.5,
+	"Chaos Bolt": 2.5,
+	"Immolate": 2.0,
+	"Firebolt": 2.5,
+};
+
+var BaseCastTimeTalented = {
+	"GCD": 1.5,
+	"Incinerate": 2.5 - 0.05 * TalentsDestruction["Emberstorm"],
+	"Chaos Bolt": 2.5 - 0.1 * TalentsDestruction["Bane"],
+	"Immolate": 2.0 - 0.1 * TalentsDestruction["Bane"],
+	"Firebolt": 2.5 - 0.25 * TalentsDestruction["Demonic Power"],
+};
+BaseCastTimeTalented["Conflagrate"] = BaseCastTimeTalented["GCD"];
+var CastTime = {
+	"GCD": BaseCastTimeTalented["GCD"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+	"Incinerate": BaseCastTimeTalented["Incinerate"] / (1 + (SpellHaste / 3279)) / (1 + 0.10 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+	"Chaos Bolt": BaseCastTimeTalented["Chaos Bolt"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+	"Immolate": BaseCastTimeTalented["Immolate"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+	"Conflagrate": 0,
+	"Firebolt": BaseCastTimeTalented["Firebolt"],
+};
+var BaseDamage = {
+	"Incinerate": 629.0,
+	"Chaos Bolt": 1621.0,
+	"Immolate": 460.0,
+	"Immolate(DOT)": 157.0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Firebolt": 215,
+};
+var ScaledDamage = {
+	"Incinerate": (BaseDamage["Incinerate"] + (BaseCastTime["Incinerate"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Chaos Bolt": (BaseDamage["Chaos Bolt"] + (BaseCastTime["Chaos Bolt"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Immolate": (BaseDamage["Immolate"] + 0.2 * Spellpower) * (1.00 + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Immolate(DOT)": (BaseDamage["Immolate(DOT)"] + 0.2 * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Aftermath"] + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Pillar of Flame (NM)" : 1882,
+	"Firebolt": (BaseDamage["Firebolt"] * (1 + 0.1 * TalentsDemonology["Improved Imp"]) + (BaseCastTime["Firebolt"] / 3.5 * PetImpSpellpower)) * (1.00 + 0.1 * TalentsDestruction["Empowered Imp"]),
+};
+var FireandBrimstone = (1.00 + 0.02 * TalentsDestruction["Fire and Brimstone"] * TalentsDestructionApply["Fire and Brimstone"]);
+var SnappedDamage = {
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate(DOT)": 0,
+};
+var SnappedCrit = {
+	"Immolate(DOT)": 0,
+	"Conflagrate(DOT)": 0,
+};
+var SnappedCritDamage = {
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate(DOT)": 0,
+};
+ScaledDamage["Conflagrate"] = 3 * SnappedDamage["Immolate(DOT)"];
+var DoTDebuffsTimer = {
+	"Immolate(DOT)": 0,
+	"Curse of Doom": 0,
+	"Corruption": 0,
+	"Conflagrate(DOT)": 0,
+};
+var DoTDebuffsExist = {
+	"Immolate(DOT)": false,
+	"Conflagrate(DOT)": false,
+};
+var SpellDamageDone = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+var SpellCritDamageDone = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+var SpellNoCritDamageDone = {
+	"Incinerate": 0,
+	"Chaos Bolt": 0,
+	"Immolate": 0,
+	"Immolate(DOT)": 0,
+	"Conflagrate": 0,
+	"Conflagrate(DOT)": 0,
+	"Pillar of Flame (NM)": 0,
+	"Firebolt": 0,
+};
+var multiplier = (1.00 + 0.02 * TalentsDestruction["Fire and Brimstone"] * TalentsDestructionApply["Fire and Brimstone"]);
+var PercentageBuffMultiplier = 1 * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]) * (1.00 + 0.03 * Buffs["3% Damage"]) * (1.00 + 0.3 * Buffs["ICC 30%"]) * (1.00 + 0.13 * Buffs["Curse of Elements"]);
+
+function DoSpellDamage(Spell, DoTExist, DOT) {
+	if (TempBuffsCharge["Cultivated Power"] < 10) {
+		TempBuffsCharge["Cultivated Power"]++;
+		TempBuffsTimer["Cultivated Power"] = 10;
+	}
+	if (TempBuffsCharge["Cultivated Power"] == 10) {
+		TempBuffsTimer["Cultivated Power"] = 10;
+	}
+	Spellpower += 20 * Trinkets["Muradin's Spyglass (HC)"] * TempBuffsCharge["Cultivated Power"];
+	if (Math.random() < 0.15) {
+		PercentageBuffMultiplier *= 0.8;
+		resisted = 0.2;
+	}
+	else if (Math.random() < 1 / 85 * 30) {
+		PercentageBuffMultiplier *= 0.9;
+		resisted = 0.1;
+	}
+	else {
+		resisted = 0;
+	}
+	if (DOT == true) {
+		if (Buffs["Spellstone"] == 1) {
+			PercentageBuffMultiplier *= 1.01;
+		}
+		if (Math.random() < SnappedCrit[Spell]) {
+			DamageDoneWarlock += (SnappedDamage[Spell] * SnappedCritDamage[Spell] * CritDamageBonus);
+			SpellDamageDone[Spell] += (SnappedDamage[Spell] * SnappedCritDamage[Spell] * CritDamageBonus);
+			SpellCritDamageDone[Spell] += (SnappedDamage[Spell] * SnappedCritDamage[Spell] * CritDamageBonus);
+			CritSpellCount[Spell] += 1;
+			spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((SnappedDamage[Spell] * SnappedCritDamage[Spell] * CritDamageBonus)) + " (CRIT)";
+			if (resisted != 0) {
+				spelltimestamp += "," + Math.round((SnappedDamage[Spell] * SnappedCritDamage[Spell] * CritDamageBonus) * resisted / (1 - resisted)) + " (resisted)";
+			}
+			spelltimestamp += "\n";
+		}
+		else {
+			DamageDoneWarlock += SnappedDamage[Spell];
+			SpellDamageDone[Spell] += SnappedDamage[Spell];
+			SpellNoCritDamageDone[Spell] += SnappedDamage[Spell];
+			NoCritSpellCount[Spell] += 1;
+			spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round(SnappedDamage[Spell]);
+			if (resisted != 0) {
+				spelltimestamp += "," + Math.round(SnappedDamage[Spell] * resisted / (1 - resisted)) + " (resisted)";
+			}
+			spelltimestamp += "\n";
+		}
+	}
+	if (DOT == false) {
+		if (Buffs["Firestone"] == 1) {
+			PercentageBuffMultiplier *= 1.01;
+		}
+		if (Math.random() <= 0.15) {
+			PercentageBuffMultiplier *= 0.8;
+			resisted = 0.2;
+		}
+		else if (Math.random() <= 1 / 85 * 30) {
+			PercentageBuffMultiplier *= 0.9;
+			resisted = 0.1;
+		}
+		else {
+			resisted = 0;
+		}
+		if (Math.random() < ProcChance["Surge of Power"] && TempBuffsExist["Surge of Power"] == 0 && ((TrinketsCurrentICD["Dislodged Foreign Object (NM)"] <= 0 && Trinkets["Dislodged Foreign Object (NM)"] == 1)|| (TrinketsCurrentICD["Dislodged Foreign Object (HC)"] <= 0 && Trinkets["Dislodged Foreign Object (HC)"] == 1))) {
+			TempBuffsExist["Surge of Power"] = 1;
+			if (Trinkets["Dislodged Foreign Object (NM)"] == 1) {
+				TrinketsCurrentICD["Dislodged Foreign Object (NM)"] = TrinketsICD["Dislodged Foreign Object (NM)"];
+			}
+			if (Trinkets["Dislodged Foreign Object (HC)"] == 1) {
+				TrinketsCurrentICD["Dislodged Foreign Object (HC)"] = TrinketsICD["Dislodged Foreign Object (HC)"];
+			}
+			TempBuffsTimer["Surge of Power"] = 20;
+		}
+		var ScaledDamage = {
+			"Incinerate": (BaseDamage["Incinerate"] + (BaseCastTime["Incinerate"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+			"Chaos Bolt": (BaseDamage["Chaos Bolt"] + (BaseCastTime["Chaos Bolt"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+			"Immolate": (BaseDamage["Immolate"] + 0.2 * Spellpower) * (1.00 + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+			"Immolate(DOT)": (BaseDamage["Immolate(DOT)"] + 0.2 * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Aftermath"] + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+			"Pillar of Flame (NM)" : 1882,
+			"Firebolt": (BaseDamage["Firebolt"] * (1 + 0.1 * TalentsDemonology["Improved Imp"]) + (BaseCastTime["Firebolt"] / 3.5 * PetImpSpellpower)) * (1.00 + 0.1 * TalentsDestruction["Empowered Imp"]),
+		};
+		ScaledDamage["Conflagrate"] = 3 * SnappedDamage["Immolate(DOT)"];
+		if (Math.random() < SpellCritChance[Spell] || TempBuffsExist["Empowered Imp"] == 1) {
+			if ((Spell == "Incinerate" || Spell == "Chaos Bolt") && DoTExist > 0) {
+				if (Spell != "Chaos Bolt") {
+					var IncinerateBonusDamage = 157 + 0.07 * Spellpower;
+					DamageDoneWarlock += ((ScaledDamage[Spell] + IncinerateBonusDamage) * (1.00 + 0.05 * Glyphs["Glyph of Incinerate"]) * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier;
+					var TotalIncinerateDamage = ((ScaledDamage[Spell] + IncinerateBonusDamage) * (1.00 + 0.05 * Glyphs["Glyph of Incinerate"]) * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier;
+					SpellCritDamageDone[Spell] += TotalIncinerateDamage;
+					SpellDamageDone[Spell] += TotalIncinerateDamage;
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round(TotalIncinerateDamage) + " (CRIT)";
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round(TotalIncinerateDamage * resisted / (1 - resisted)) + " (resisted)";
+					}
+					spelltimestamp += "\n";
+					//Incinerate Bonus Damage when Immolate debuff is active
+				}
+				else {
+					DamageDoneWarlock += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier;
+					//I cant figure out how ScaledDamage[>Incinerate<] doesn't multiply correctly with 1.1 Fire and Brimstone bonus
+					SpellDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell]* CritDamageBonus * multiplier) * PercentageBuffMultiplier;
+					SpellCritDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier;
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier) + " (CRIT)";
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus * multiplier) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)"
+					}
+					spelltimestamp += "\n";
+				}
+			TempBuffsExist["Empowered Imp"] = 0;
+			}
+			else {
+				if (Spell != "Conflagrate") {
+					DamageDoneWarlock += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * PercentageBuffMultiplier;
+					SpellDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * PercentageBuffMultiplier;
+					SpellCritDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * PercentageBuffMultiplier;
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * PercentageBuffMultiplier) + " (CRIT)";
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)"
+					}
+					spelltimestamp += "\n";
+				}
+				else {
+					TempBuffsExist["Pyroclasm"] = 1;
+					DamageDoneWarlock += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]);
+					SpellDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]);
+					SpellCritDamageDone[Spell] += (ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]);
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]) * PercentageBuffMultiplier) + " (CRIT)";
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round((ScaledDamage[Spell] * SpellCritDamage[Spell] * CritDamageBonus) * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)"
+					}
+					spelltimestamp += "\n";
+					TempBuffsTimer["Pyroclasm"] = 10;
+				}
+			}
+			if (Trinkets["Reign of the Unliving (NM)"] == 1 && TrinketsCurrentICD["Reign of the Unliving (NM)"] == 0) {
+				if (TempBuffsCharge["Mote of Flame (NM)"] < 3) {
+					TempBuffsCharge["Mote of Flame (NM)"]++;
+					TrinketsCurrentICD["Reign of the Unliving (NM)"] = TrinketsICD["Reign of the Unliving (NM)"];
+					if (proctimestamp == true) {
+						spelltimestamp += "Mote of Flame (NM): " + TempBuffsCharge["Mote of Flame (NM)"] + " Charges!\n";
+					}
+				}
+				if (TempBuffsCharge["Mote of Flame (NM)"] == 3) {
+					TempBuffsCharge["Mote of Flame (NM)"] = 0;
+					TrinketsCurrentICD["Reign of the Unliving (NM)"] = TrinketsICD["Reign of the Unliving (NM)"];
+					if (Math.random() < BaseCrit + SpellCrit/4591 + Intellect/16666.67) {
+						DamageDoneWarlock += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * 1.5 * CritDamageBonus;
+						SpellDamageDone["Pillar of Flame (NM)"] += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * 1.5 * CritDamageBonus;
+						SpellCritDamageDone["Pillar of Flame (NM)"] += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * 1.5 * CritDamageBonus;
+						spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: Pillar of Flame (NM),Damage: " + Math.round(ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * 1.5 * CritDamageBonus) + " (CRIT)";
+						if (resisted != 0) {
+							spelltimestamp += "," + Math.round(ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * 1.5 * CritDamageBonus * resisted / (1 - resisted)) + " (resisted)"
+						}
+						spelltimestamp += "\n";
+						CritSpellCount["Pillar of Flame (NM)"]++;
+					}
+					else {
+						DamageDoneWarlock += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]);
+						SpellDamageDone["Pillar of Flame (NM)"] += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]);
+						SpellNoCritDamageDone["Pillar of Flame (NM)"] += ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]);
+						spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: Pillar of Flame (NM),Damage: " + Math.round(ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]));
+						if (resisted != 0) {
+							spelltimestamp += "," + Math.round(ScaledDamage["Pillar of Flame (NM)"] * (1 + 0.03 * Buffs["3% Damage"]) * (1 + 0.3 * Buffs["ICC 30%"]) * (1 + 0.1 * TempBuffsExist["4pt10"]) * (1 + 0.01 * Buffs["Firestone"]) * resisted / (1 - resisted)) + " (resisted)"
+						}
+						spelltimestamp += "\n";
+						NoCritSpellCount["Pillar of Flame (NM)"]++;
+					}
+					SpellCount["Pillar of Flame (NM)"]++;
+				}
+			}
+			DamageDoneWarlock;
+			CritSpellCount[Spell] += 1;
+		}
+		else {
+			if ((Spell == "Incinerate" || Spell == "Chaos Bolt") && DoTExist > 0) {
+				if (Spell != "Chaos Bolt") {
+					var IncinerateBonusDamage = 157 + 0.07 * Spellpower;
+					DamageDoneWarlock += ((ScaledDamage[Spell] + IncinerateBonusDamage) * (1.00 + 0.05 * Glyphs["Glyph of Incinerate"]) * multiplier) * PercentageBuffMultiplier;
+					var TotalIncinerateDamage = ((ScaledDamage[Spell] + IncinerateBonusDamage) * (1.00 + 0.05 * Glyphs["Glyph of Incinerate"]) * multiplier) * PercentageBuffMultiplier;
+					SpellDamageDone[Spell] += TotalIncinerateDamage;
+					SpellNoCritDamageDone[Spell] += TotalIncinerateDamage;
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round(TotalIncinerateDamage);
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round(TotalIncinerateDamage * resisted / (1 - resisted)) + " (resisted)";
+					}
+					spelltimestamp += "\n";
+
+					//Incinerate Bonus Damage when Immolate debuff is active
+				}
+				else {
+					DamageDoneWarlock += (ScaledDamage[Spell] * multiplier) * PercentageBuffMultiplier;
+					//I cant figure out how ScaledDamage[>Incinerate<] doesn't multiply correctly with 1.1 Fire and Brimstone bonus
+					SpellDamageDone[Spell] += (ScaledDamage[Spell] * multiplier) * PercentageBuffMultiplier;
+					SpellNoCritDamageDone[Spell] += (ScaledDamage[Spell] * multiplier) * PercentageBuffMultiplier;
+					spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell] * multiplier) * PercentageBuffMultiplier);
+					if (resisted != 0) {
+						spelltimestamp += "," + Math.round((ScaledDamage[Spell] * multiplier) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)";
+					}
+					spelltimestamp += "\n";
+				}
+			}
+			else {
+				DamageDoneWarlock += ScaledDamage[Spell] * PercentageBuffMultiplier;
+				SpellDamageDone[Spell] += ScaledDamage[Spell] * PercentageBuffMultiplier;
+				SpellNoCritDamageDone[Spell] += ScaledDamage[Spell] * PercentageBuffMultiplier;
+				spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell]) * PercentageBuffMultiplier);
+				if (resisted != 0) {
+					spelltimestamp += "," + Math.round((ScaledDamage[Spell]) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)";
+				}
+				spelltimestamp += "\n";
+			}
+			DamageDoneWarlock;
+			NoCritSpellCount[Spell] += 1;
+		}
+	}
+	Spellpower -= 20 * Trinkets["Muradin's Spyglass (HC)"] * TempBuffsCharge["Cultivated Power"];
+
+	SpellCount[Spell] += 1;
+
+}
+
+function DoPetDamage(Spell, Pet) {
+	Spellpower += 20 * Trinkets["Muradin's Spyglass (HC)"] * TempBuffsCharge["Cultivated Power"];
+	PetImpSpellpower = Spellpower * 0.15;
+	var ScaledDamage = {
+	"Incinerate": (BaseDamage["Incinerate"] + (BaseCastTime["Incinerate"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Chaos Bolt": (BaseDamage["Chaos Bolt"] + (BaseCastTime["Chaos Bolt"] / 3.5) * (1.00 + 0.04 * TalentsDestruction["Shadow and Flame"]) * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Immolate": (BaseDamage["Immolate"] + 0.2 * Spellpower) * (1.00 + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Immolate(DOT)": (BaseDamage["Immolate(DOT)"] + 0.2 * Spellpower) * (1.00 + 0.03 * TalentsDestruction["Aftermath"] + 0.1 * TalentsDestruction["Improved Immolate"] + 0.03 * TalentsDestruction["Emberstorm"]),
+	"Pillar of Flame (NM)" : 1882,
+	"Firebolt": (BaseDamage["Firebolt"] * (1 + 0.1 * TalentsDemonology["Improved Imp"]) + (BaseCastTime["Firebolt"] / 3.5 * PetImpSpellpower)) * (1.00 + 0.1 * TalentsDestruction["Empowered Imp"]),
+	};
+	if (Pet == "Imp") {
+		if (Buffs["Command (Orc)"] == 1) {
+			sflag = "hi";
+			PercentageBuffMultiplier *= 1.05;
+		}
+		if (Math.random() <= 0.15) {
+			PercentageBuffMultiplier *= 0.8;
+			resisted = 0.2;
+		}
+		else if (Math.random() <= 1 / 85 * 30) {
+			PercentageBuffMultiplier *= 0.9;
+			resisted = 0.1;
+		}
+		else {
+			resisted = 0;
+			flag
+		}
+		if (Math.random() < 0.05) {
+			DamageDoneImp += ScaledDamage[Spell] * SpellCritDamage[Spell] * PercentageBuffMultiplier;
+			SpellDamageDone["Firebolt"] += ScaledDamage[Spell] * SpellCritDamage[Spell] * PercentageBuffMultiplier;
+			SpellCritDamageDone[Spell] += ScaledDamage[Spell] * SpellCritDamage[Spell] * PercentageBuffMultiplier;
+			spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell]) * SpellCritDamage[Spell] * PercentageBuffMultiplier) + " (CRIT)";
+			if (resisted != 0) {
+				spelltimestamp += "," + Math.round((ScaledDamage[Spell]) * SpellCritDamage[Spell] * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)";
+			}
+			spelltimestamp += "\n";
+			CritSpellCount["Firebolt"]++;
+			if (TalentsDestruction["Empowered Imp"] == 1 && Math.random() < 0.33) {
+				TempBuffsExist["Empowered Imp"] = 1;
+			}
+			else if (TalentsDestruction["Empowered Imp"] == 2 && Math.random() < 0.66) {
+				TempBuffsExist["Empowered Imp"] = 1;
+			}
+			else if (TalentsDestruction["Empowered Imp"] == 3) {
+				TempBuffsExist["Empowered Imp"] = 1;
+			}
+		}
+		else {
+			DamageDoneImp += ScaledDamage[Spell] * PercentageBuffMultiplier;
+			SpellDamageDone["Firebolt"] += ScaledDamage[Spell] * PercentageBuffMultiplier;
+			SpellNoCritDamageDone[Spell] += ScaledDamage[Spell] * PercentageBuffMultiplier;
+			spelltimestamp += "Time :" + (Math.round(10 * t / dt) / 10 * dt).toFixed(tPrecision).toString() + ",Current Spell: " + Spell + ",Damage: " + Math.round((ScaledDamage[Spell]) * PercentageBuffMultiplier * (1.00 + 0.1 * TempBuffsExist["4pt10"]));
+			if (resisted != 0) {
+				spelltimestamp += "," + Math.round((ScaledDamage[Spell]) * PercentageBuffMultiplier * resisted / (1 - resisted)) + " (resisted)";
+			}
+			spelltimestamp += "\n";
+			NoCritSpellCount["Firebolt"]++;
+		}
+		SpellCount["Firebolt"]++;
+	}
+	Spellpower -= 20 * Trinkets["Muradin's Spyglass (HC)"] * TempBuffsCharge["Cultivated Power"];
+
+}
+
+
+while (isCasting == false && t < DamageDuration) {
+	isCasting = true;
+	//Currently Casting
+	if (Buffs["Heroism (start)"] == 1) {
+		TempBuffsExist["Heroism"] = 1;
+		TempBuffsTimer["Heroism"] = 40;
+		Buffs["Heroism (start)"] = 0;
+	}
+	if (Prepot == true && Consumables["Potion of Speed"] == 1 && ItemCurrentICD["Potion of Speed"] <= 0) {
+		TempBuffsTimer["Potion of Speed"] = 15 + PrepotTime;
+		ItemCurrentICD["Potion of Speed"] = ItemICD["Potion of Speed"];
+		TempBuffsExist["Potion of Speed"] = 1;
+		SpellHaste += 500 * TempBuffsExist["Potion of Speed"];
+		spelltimestamp += "Potion of Speed used!\n";
+	}
+	if (Prepot == true && Consumables["Potion of Wild Magic"] == 1 && ItemCurrentICD["Potion of Wild Magic"] <= 0) {
+		TempBuffsTimer["Potion of Wild Magic"] = 15 + PrepotTime;
+		ItemCurrentICD["Potion of Wild Magic"] = ItemICD["Potion of Wild Magic"];
+		TempBuffsExist["Potion of Wild Magic"] = 1;
+		Spellpower += 200 * TempBuffsExist["Potion of Wild Magic"];
+		SpellCrit += 200 * TempBuffsExist["Potion of Wild Magic"];
+		spelltimestamp += "Potion of Wild Magic used!\n";
+	}
+	if (Consumables["Flame Cap"] == 1 && ItemCurrentICD["Flame Cap"] <= 0) {
+		TempBuffsTimer["Flame Cap"] = 60;
+		ItemCurrentICD["Flame Cap"] = ItemICD["Flame Cap"];
+		TempBuffsExist["Flame Cap"] = 1;
+		Spellpower += 80 * TempBuffsExist["Flame Cap"];
+		spelltimestamp += "Flame Cap!\n";
+	}
+	var CastTime = {
+		"GCD": BaseCastTimeTalented["GCD"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+		"Incinerate": BaseCastTimeTalented["Incinerate"] / (1 + (SpellHaste / 3279)) / (1 + 0.10 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+		"Chaos Bolt": BaseCastTimeTalented["Chaos Bolt"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+		"Immolate": BaseCastTimeTalented["Immolate"] / (1 + (SpellHaste / 3279)) / (1 + 0.03 * Buffs["3% Haste"]) / (1 + 0.05 * Buffs["Wrath of Air Totem"]) * (1 - (0.1 * TalentsDestruction["Backdraft"] * TempBuffsExist["Backdraft"])) * (1 - (0.3 * TempBuffsExist["Heroism"])),
+		"Conflagrate": 0,
+		"Firebolt": BaseCastTimeTalented["Firebolt"],
+	};
+	if (CastTime["GCD"] < 1) {
+		CastTime["GCD"] = 1;
+	}
+	if (DoTDebuffsTimer["Immolate(DOT)"] < CastTime["Immolate"]) {
+		CurrentCastTime = CastTime["Immolate"];
+		CurrentSpellCast = "Immolate";
+	}
+	//If Immolate DoT duration < Cast time of immolate, cast immolate next
+	else if (CurrentSpellCD["Conflagrate"] <= 0) {
+		CurrentCastTime = CastTime["Conflagrate"];
+		CurrentSpellCast = "Conflagrate";
+		CurrentSpellCD["Conflagrate"] = 10;
+	}
+	
+	else if (CurrentSpellCD["Chaos Bolt"] <= 0) {
+			CurrentCastTime = CastTime["Chaos Bolt"];
+			CurrentSpellCast = "Chaos Bolt";
+	}
+	//If Chaos bolt is not on CD cast Chaos Bolt next
+	else {
+		CurrentCastTime = CastTime["Incinerate"];
+		CurrentSpellCast = "Incinerate";
+	}
+	if (Pets["Imp"] == 1 && CurrentImpCastTime <= 0) {
+		CurrentImpCastTime = CastTime["Firebolt"];
+		CurrentImpSpellCast = "Firebolt";
+	}
+	CurrentGCD = CastTime["GCD"];
+			//Cast Incinerate
+	while (isCasting == true && t < DamageDuration) {
+		CurrentCastTime -= dt;
+		if (Pets["Imp"] == 1) {
+			CurrentImpCastTime -= dt;
+		}
+		CurrentGCD -= dt;
+		//Current Cast Time Update
+		CurrentSpellCD["Chaos Bolt"] -= dt;
+		CurrentSpellCD["Conflagrate"] -= dt;
+		//Current Spell CDs Update
+		DoTDebuffsTimer["Immolate(DOT)"] -= dt;
+		DoTDebuffsTimer["Conflagrate(DOT)"] -= dt;
+		var previouscharge = TempBuffsCharge["Surging Power"]
+
+		TempBuffsTimer["Surge of Power"] -= dt;
+		if (TempBuffsTimer["Surge of Power"] > 0) {
+			TempBuffsCharge["Surging Power"] = Math.floor(11 - TempBuffsTimer["Surge of Power"] / 2);
+		}
+		if (previouscharge != TempBuffsCharge["Surging Power"] && proctimestamp == true) {
+		spelltimestamp += "DFO charge at " + TempBuffsCharge["Surging Power"] + "\n";
+		}
+		if (TempBuffsTimer["Surge of Power"] <= dt/4) {
+			TempBuffsExist["Surge of Power"] = 0;
+			TempBuffsCharge["Surging Power"] = 0;
+		}
+		//Temporary buff update
+		PercentageBuffMultiplier = 1 * (1 + 0.03 * TalentsDestruction["Pyroclasm"] * TempBuffsExist["Pyroclasm"]) * (1.00 + 0.03 * Buffs["3% Damage"]) * (1.00 + 0.3 * Buffs["ICC 30%"]) * (1.00 + 0.13 * Buffs["Curse of Elements"]) * (1.00 + 0.1 * TempBuffsExist["4pt10"]) ;
+		multiplier = (1.00 + 0.02 * TalentsDestruction["Fire and Brimstone"] * TalentsDestructionApply["Fire and Brimstone"]);
+		
+		
+		
+		for (i = 4; i > -1; i--) {
+			if (DoTDebuffsTimer["Immolate(DOT)"] < 3*i + dt/4 && DoTDebuffsTimer["Immolate(DOT)"] > 3*i - dt/4) {
+				if (TempBuffsExist["4pt10"] == 0) {
+					if (Math.random() < ProcChance["4pt10"]) {
+						PercentageBuffMultiplier *= 1.00 + 0.1;
+						TempBuffsExist["4pt10"] = 1;
+						TempBuffsTimer["4pt10"] = 10;
+						if (proctimestamp == true) {
+							spelltimestamp += "4pt10!\n";
+						}
+					}
+				}
+				DoSpellDamage("Immolate(DOT)", DoTDebuffsTimer["Immolate(DOT)"], true);
+
+			}
+		}
+		if (DoTDebuffsTimer["Immolate(DOT)"] > 0) {
+			TalentsDestructionApply["Fire and Brimstone"] = 1;
+		}
+		if (DoTDebuffsTimer["Immolate(DOT)"] <= 0) {
+			TalentsDestructionApply["Fire and Brimstone"] = 0;
+		}
+		if (DoTDebuffsTimer["Immolate(DOT)"] > dt / 4) {
+			DebuffUptime["Immolate(DOT)"] += dt;
+		}
+		if (TempBuffsTimer["4pt10"] > dt / 4) {
+			BuffUptime["4pt10"] += dt;
+		}
+		if (TrinketsCurrentICD["Dislodged Foreign Object (NM)"] > 0) {
+			TrinketsCurrentICD["Dislodged Foreign Object (NM)"] -= dt;
+		}
+		if (TrinketsCurrentICD["Dislodged Foreign Object (HC)"] > 0) {
+			TrinketsCurrentICD["Dislodged Foreign Object (HC)"] -= dt;
+		}
+		if (TempBuffsTimer["Surge of Power"] <= 0) {
+			TempBuffsTimer["Surge of Power"] = 0;
+		}
+		//immolate dot tick every 3s ± dt/4 to make sure it will definitely tick once and only once
+		for (i = 2; i > -1; i--) {
+			if (DoTDebuffsTimer["Conflagrate(DOT)"] < (2*i) + (dt/4) && DoTDebuffsTimer["Conflagrate(DOT)"] > (2*i) - (dt/4)) {
+				DoSpellDamage("Conflagrate(DOT)", DoTDebuffsTimer["Conflagrate(DOT)"], true);
+			}
+		}
+		t += dt;
+		TempBuffsTimer["Pyroclasm"] -= dt;
+		if (TempBuffsTimer["Pyroclasm"] <= 0) {
+			TempBuffsTimer["Pyroclasm"] = 0;
+			TempBuffsExist["Pyroclasm"] = 0;
+		}
+		TempBuffsTimer["Backdraft"] -= dt;
+		if (TempBuffsTimer["Backdraft"] <= 0 || TempBuffsCharge["Backdraft"] <= 0) {
+			TempBuffsTimer["Backdraft"] = 0;
+			TempBuffsExist["Backdraft"] = 0;
+		}
+		TempBuffsTimer["4pt10"] -= dt;
+		if (TempBuffsTimer["4pt10"] <= 0) {
+			TempBuffsTimer["4pt10"] = 0;
+			TempBuffsExist["4pt10"] = 0;
+		}
+		TempBuffsTimer["Frostforged Sage"] -= dt;
+		if (TempBuffsTimer["Frostforged Sage"] <= 0) {
+			TempBuffsTimer["Frostforged Sage"] = 0;
+			Spellpower -= 285 * TempBuffsExist["Frostforged Sage"];
+			TempBuffsExist["Frostforged Sage"] = 0;
+		}
+		TempBuffsTimer["Twilight Flames"] -= dt;
+		if (TempBuffsTimer["Twilight Flames"] <= 0) {
+			TempBuffsTimer["Twilight Flames"] = 0;
+			Spellpower -= 861 * TempBuffsExist["Twilight Flames"];
+			TempBuffsExist["Twilight Flames"] = 0;
+		}
+		TempBuffsTimer["Potion of Speed"] -= dt;
+		if (TempBuffsTimer["Potion of Speed"] <= 0) {
+			TempBuffsTimer["Potion of Speed"] = 0;
+			SpellHaste -= 500 * TempBuffsExist["Potion of Speed"];
+			TempBuffsExist["Potion of Speed"] = 0;
+			if (t > 65) {
+				Consumables["Potion of Speed"] = 0;
+			}
+			//potion can only be used once per fight in combat
+		}
+		TempBuffsTimer["Potion of Wild Magic"] -= dt;
+		if (TempBuffsTimer["Potion of Wild Magic"] <= 0) {
+			TempBuffsTimer["Potion of Wild Magic"] = 0;
+			Spellpower -= 200 * TempBuffsExist["Potion of Wild Magic"];
+			SpellCrit -= 200 * TempBuffsExist["Potion of Wild Magic"];
+			TempBuffsExist["Potion of Wild Magic"] = 0;
+			if (t > 65) {
+				Consumables["Potion of Wild Magic"] = 0;
+			}
+			//potion can only be used once per fight in combat
+		}
+		TempBuffsTimer["Flame Cap"] -= dt;
+		if (TempBuffsTimer["Flame Cap"] <= 0) {
+			TempBuffsTimer["Flame Cap"] = 0;
+			Spellpower -= 80 * TempBuffsExist["Flame Cap"];
+			TempBuffsExist["Flame Cap"] = 0;
+		}
+		TempBuffsTimer["Heroism"] -= dt;
+		if (TempBuffsTimer["Heroism"] <= 0) {
+			TempBuffsTimer["Heroism"] = 0;
+			TempBuffsExist["Heroism"] = 0;
+		}
+
+		//Time Update + buff update
+		/*timestamps += "Time: " + t + ",Current Spell Cast: " + CurrentSpellCast + " Current Cast Time: " + CurrentCastTime + " Imo Debuff: " + DoTDebuffsTimer["Immolate(DOT)"] + flag.toString() + "\n"*/;
+		if (CurrentSpellCD["Chaos Bolt"] <= 0) {
+			CurrentSpellCD["Chaos Bolt"] = 0;
+		}
+		//If Chaos Bolt CD = 0 or < 0, set it to 0
+		if (CurrentSpellCD["Conflagrate"] <= 0) {
+			CurrentSpellCD["Conflagrate"] = 0;
+		}
+		//If Conflagrate CD = 0 or < 0, set it to 0
+		if (DoTDebuffsTimer["Conflagrate(DOT)"] <= 0) {
+			DoTDebuffsTimer["Conflagrate(DOT)"] = 0;
+		}
+		//If Conflagrate DOT = 0 or < 0, set it to 0
+		if (DoTDebuffsTimer["Immolate(DOT)"] <= 0) {
+			DoTDebuffsTimer["Immolate(DOT)"] = 0;
+		}
+		if (CurrentGCD <= 0) {
+			CurrentGCD = 0;
+		}
+		//If Immolat DOT = 0 or < 0, set it to 0
+		if (Pets["Imp"] == 1 && CurrentImpCastTime <= 0) {
+			CurrentImpCastTime = CastTime["Firebolt"];
+			CurrentImpSpellCast = "Firebolt";
+			CurrentImpCastTime = 0;
+		}
+		TrinketsCurrentICD["Reign of the Unliving (NM)"] -= dt;
+		if (TrinketsCurrentICD["Reign of the Unliving (NM)"] <= 0) {
+			TrinketsCurrentICD["Reign of the Unliving (NM)"] = 0;
+		}
+		ItemCurrentICD["Ashen Band of Endless Destruction"] -= dt;
+		if (ItemCurrentICD["Ashen Band of Endless Destruction"] <= 0) {
+			ItemCurrentICD["Ashen Band of Endless Destruction"] = 0;
+		}
+		ItemCurrentICD["Charred Twilight Scale (HC)"] -= dt;
+		if (ItemCurrentICD["Charred Twilight Scale (HC)"] <= 0) {
+			ItemCurrentICD["Charred Twilight Scale (HC)"] = 0;
+		}
+		ItemCurrentICD["Potion of Speed"] -= dt;
+		if (ItemCurrentICD["Potion of Speed"] <= 0) {
+			ItemCurrentICD["Potion of Speed"] = 0;
+		}
+		if (Pets["Imp"] == 1 && CurrentImpCastTime <= 0) {
+			Spellpower += (105 * Trinkets["Dislodged Foreign Object (NM)"] + 121 * Trinkets["Dislodged Foreign Object (HC)"]) * TempBuffsCharge["Surging Power"];
+			PetImpSpellpower = Spellpower * 0.15;
+			ScaledDamage["Firebolt"] = (BaseDamage["Firebolt"] * (1 + 0.1 * TalentsDemonology["Improved Imp"]) + (BaseCastTime["Firebolt"] / 3.5 * PetImpSpellpower)) * (1.00 + 0.1 * TalentsDestruction["Empowered Imp"]);
+			DoPetDamage(CurrentImpSpellCast, "Imp");
+			CurrentImpCastTime = CastTime["Firebolt"];
+			CurrentImpSpellCast = "Firebolt";
+			Spellpower -= (105 * Trinkets["Dislodged Foreign Object (NM)"] + 121 * Trinkets["Dislodged Foreign Object (HC)"]) * TempBuffsCharge["Surging Power"];
+		}
+		if (CurrentCastTime <= 0) {
+			if (ItemCurrentICD["Ashen Band of Endless Destruction"] <= 0 && Math.random() < ProcChance["Frostforged Sage"]) {
+				ItemCurrentICD["Ashen Band of Endless Destruction"] = ItemICD["Ashen Band of Endless Destruction"];
+				TempBuffsExist["Frostforged Sage"] = 1;
+				TempBuffsTimer["Frostforged Sage"] = 10;
+				Spellpower += 285;
+				if (proctimestamp == true) {
+					spelltimestamp += "Ashen ring PROC!\n";
+				}
+			}
+			if (TrinketsCurrentICD["Charred Twilight Scale (HC)"] <= 0 && Math.random() < ProcChance["Twilight Flames"]) {
+				TrinketsCurrentICD["Charred Twilight Scale (HC)"] = TrinketsICD["Charred Twilight Scale (HC)"];
+				TempBuffsExist["Twilight Flames"] = 1;
+				TempBuffsTimer["Twilight Flames"] = 15;
+				Spellpower += 861;
+				if (proctimestamp == true) {
+					spelltimestamp += "CTS PROC!\n";
+				}
+			}
+			Spellpower += (105 * Trinkets["Dislodged Foreign Object (NM)"] + 121 * Trinkets["Dislodged Foreign Object (HC)"]) * TempBuffsCharge["Surging Power"];
+			if (CurrentSpellCast == "Immolate") {
+				DoTDebuffsTimer["Immolate(DOT)"] = 15;
+				SnappedDamage["Immolate"] = ScaledDamage["Immolate"] * PercentageBuffMultiplier;
+				SnappedDamage["Immolate(DOT)"] = ScaledDamage["Immolate(DOT)"] * (1.00 + 0.1 * Glyphs["Glyph of Immolate"]) * PercentageBuffMultiplier;
+				SnappedCrit["Immolate(DOT)"] = SpellCritChance["Immolate(DOT)"];
+				SnappedCritDamage["Immolate(DOT)"] = SpellCritDamage["Immolate(DOT)"];
+			}
+			//Increment SpellCount
+			if (CurrentSpellCast == "Chaos Bolt") {
+				CurrentSpellCD["Chaos Bolt"] = SpellCD["Chaos Bolt"];
+			}
+			if (CurrentSpellCast == "Conflagrate") {
+				ScaledDamage["Conflagrate"] = 3 * SnappedDamage["Immolate(DOT)"] * PercentageBuffMultiplier;
+				CurrentSpellCD["Conflagrate"] = SpellCD["Conflagrate"];
+				SnappedDamage["Conflagrate(DOT)"] = SnappedDamage["Immolate(DOT)"] / 1.306 * PercentageBuffMultiplier;
+				SnappedCrit["Conflagrate(DOT)"] = SpellCritChance["Conflagrate"];
+				SnappedCritDamage["Conflagrate(DOT)"] = 2;
+				DoTDebuffsTimer["Conflagrate(DOT)"] = 6;
+				TempBuffsTimer["Backdraft"] = 15;
+				TempBuffsExist["Backdraft"] = 1;
+			}
+			//If Chaos Bolt was casted, put it's current CD to 12
+			if (CurrentSpellCast != "GCD") {
+				DoSpellDamage(CurrentSpellCast, DoTDebuffsTimer["Immolate(DOT)"], false);
+				if (proctimestamp == true) {
+					spelltimestamp += Spellpower + "\n"
+				}
+				TempBuffsCharge["Backdraft"]--;
+				if (TempBuffsCharge["Backdraft"] <= 0) {
+					TempBuffsCharge["Backdraft"] = 0;
+					TempBuffsExist["Backdraft"] = 0;
+				}
+			}
+			//RNG < crit chance, sums Damage Done, Update Crit/nonCrit Spell Counts
+			if (CastTime[CurrentSpellCast] < CastTime["GCD"]) {
+				CurrentSpellCast = "GCD";
+			}
+			if (CurrentSpellCast != "GCD") {
+				isCasting = false;
+				//cast is done
+			}
+			if (CurrentGCD <= 0) {
+				isCasting = false;
+			}
+			Spellpower -= (105 * Trinkets["Dislodged Foreign Object (NM)"] + 121 * Trinkets["Dislodged Foreign Object (HC)"]) * TempBuffsCharge["Surging Power"];
+			//spelltimestamp += CastTime["GCD"] + "\n";
+		}
+		
+	}
+}
+var DamageDoneTotal = DamageDoneWarlock + DamageDoneImp;
+var result = 
+			"Spell," + "Total Spell Damage Done," + "Total Spell Count," + "Non-Crit Damage Done," + "Non-Crit Count," + "Ave Non-Crit Damage," + "Crit Damage Done," + "Crit Count," + "Ave Crit Damage," + "Crit%\n";
+for (var [key, value] of Object.entries(SpellCount)) {
+	result += `${key}:,` + Math.round(SpellDamageDone[key]) + ` (${Math.round(SpellDamageDone[key]*10000/DamageDoneTotal)/100}%)`+ "," + SpellCount[key] + "," + Math.round(SpellNoCritDamageDone[key]) + "," + NoCritSpellCount[key] + "," + Math.round(SpellNoCritDamageDone[key] / NoCritSpellCount[key]) + "," + Math.round(SpellCritDamageDone[key]) + "," + CritSpellCount[key] + "," + Math.round(SpellCritDamageDone[key] / CritSpellCount[key]) + "," + (CritSpellCount[key] / SpellCount[key] * 100).toFixed(2) + "\n";
+}
+result += "Total Damage:," + DamageDoneTotal + "\n" + "DPS: " + DamageDoneTotal / DamageDuration + "\n" + "Debuff Uptimes (Immolate DoT): " + DebuffUptime["Immolate(DOT)"] / DamageDuration + "\n" + "Buff Uptimes (4pt10): " + BuffUptime["4pt10"] / DamageDuration;
+var output =+ "\n" + /*timestamps + "\n" + */spelltimestamp;
+var dps = "\n" + DamageDoneTotal / DamageDuration;
+writeTextToFile(spelltimestamp, "/Users/~/Desktop/Warlock/simstimestamp.csv", true);
+writeTextToFile(result, "/Users/~/Desktop/Warlock/Summary.csv", true);
+writeTextToFile(dps.toString(), "/Users/~/Desktop/Warlock/dps.txt", false); 
+//}
+result;
